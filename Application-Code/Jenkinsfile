@@ -6,6 +6,7 @@ pipeline {
   }
 
   environment {
+    SCANNER_HOME=tool 'sonar-scanner'
     SONAR_HOST_URL = 'http://192.168.251.30:9000'
   }
 
@@ -33,20 +34,15 @@ pipeline {
       }
     }
 
-stage('SonarQube Scan') {
-  steps {
-    dir('Application-Code') {
-      withSonarQubeEnv('sonar') {
-        sh '''
-          /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonar-scanner/bin/sonar-scanner \
-          -Dsonar.projectKey=netflix-react \
-          -Dsonar.sources=src \
-          -Dsonar.host.url=http://192.168.251.30:9000
-        '''
-      }
-    }
-  }
-}
+        stage("Sonarqube Analysis "){
+            steps{
+                withSonarQubeEnv('sonar') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Netflix \
+                    -Dsonar.projectKey=Netflix '''
+                }
+            }
+        }
+
 
     stage('OWASP Dependency Check') {
       steps {
