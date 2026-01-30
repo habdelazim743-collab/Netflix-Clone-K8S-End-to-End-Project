@@ -33,20 +33,20 @@ pipeline {
       }
     }
 
-    stage('SonarQube Scan') {
-      steps {
-        dir('Application-Code') {
-          withSonarQubeEnv('sonar') {
-            sh '''
-              sonar-scanner \
-              -Dsonar.projectKey=netflix-react \
-              -Dsonar.sources=src \
-              -Dsonar.host.url=http://192.168.251.30:9000
-            '''
-          }
-        }
+stage('SonarQube Scan') {
+  steps {
+    dir('Application-Code') {
+      withSonarQubeEnv('sonar') {
+        sh '''
+          ${tool 'sonar-scanner'}/bin/sonar-scanner \
+          -Dsonar.projectKey=netflix-react \
+          -Dsonar.sources=src \
+          -Dsonar.host.url=http://192.168.251.30:9000
+        '''
       }
     }
+  }
+}
 
     stage('OWASP Dependency Check') {
       steps {
