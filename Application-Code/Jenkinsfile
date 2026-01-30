@@ -47,18 +47,31 @@ pipeline {
         }
       }
     }
-
-    stage('OWASP Dependency Check') {
-      steps {
-        dir('Application-Code') {
-           sh '''
-        ${tool 'dependency-check'}/bin/dependency-check.sh \
-        --project netflix-react \
-        --scan .
-        '''
+    stage("quality gate"){
+           steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                }
+            }
         }
-      }
+    
+    stage('Install Dependencies') {
+        steps {
+                sh "npm install"
+            }
+        }
     }
   }
 }
-
+    post {
+     always {
+        emailext attachLog: true,
+            subject: "'${currentBuild.result}'",
+            body: "Project: ${env.JOB_NAME}<br/>" +
+                "Build Number: ${env.BUILD_NUMBER}<br/>" +
+                "URL: ${env.BUILD_URL}<br/>",
+            to: 'mahmoudyousef6868@gmail.com',
+            attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
+        }
+    }
+}
