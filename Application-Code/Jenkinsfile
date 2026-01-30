@@ -51,9 +51,14 @@ pipeline {
     stage('OWASP Dependency Check') {
       steps {
         dir('Application-Code') {
-          sh 'dependency-check --project netflix-react --scan .'
+           sh '''
+        ${tool 'dependency-check'}/bin/dependency-check.sh \
+        --project netflix-react \
+        --scan .
+        '''
         }
       }
     }
   }
 }
+
