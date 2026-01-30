@@ -38,7 +38,7 @@ stage('SonarQube Scan') {
     dir('Application-Code') {
       withSonarQubeEnv('sonar') {
         sh '''
-          ${tool 'sonar-scanner'}/bin/sonar-scanner \
+          /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonar-scanner/bin/sonar-scanner \
           -Dsonar.projectKey=netflix-react \
           -Dsonar.sources=src \
           -Dsonar.host.url=http://192.168.251.30:9000
