@@ -2,48 +2,58 @@ pipeline {
   agent any
 
   tools {
-    nodejs 'NodeJS-18'      
-    sonarScanner 'SonarQube'
+    nodejs 'NodeJS-18'
+  }
+
+  environment {
+    SONAR_HOST_URL = 'http://192.168.251.30:9000'
   }
 
   stages {
+
     stage('Checkout') {
       steps {
-        git branch: 'main', url: 'https://github.com/habdelazim743-collab/Netflix-Clone-K8S-End-to-End-Project.git'
+        checkout scm
       }
     }
 
     stage('Install Dependencies') {
       steps {
-        sh 'yarn install'
+        dir('Application-Code') {
+          sh 'yarn install'
+        }
       }
     }
 
-    stage('Build') {
+    stage('Build React App') {
       steps {
-        sh 'yarn build'
+        dir('Application-Code') {
+          sh 'yarn build'
+        }
       }
     }
 
     stage('SonarQube Scan') {
-      environment {
-        SONAR_SCANNER_PARAMS = '-Dsonar.login=${SONAR-CRED}'
-      }
       steps {
-        sh "sonar-scanner"
+        dir('Application-Code') {
+          withSonarQubeEnv('sonar') {
+            sh '''
+              sonar-scanner \
+              -Dsonar.projectKey=netflix-react \
+              -Dsonar.sources=src \
+              -Dsonar.host.url=http://192.168.251.30:9000
+            '''
+          }
+        }
       }
     }
 
-    stage('OWASP Scan') {
+    stage('OWASP Dependency Check') {
       steps {
-        sh 'dependency-check.sh --project netflix-app --scan .'
+        dir('Application-Code') {
+          sh 'dependency-check --project netflix-react --scan .'
+        }
       }
-    }
-  }
-
-  post {
-    always {
-      junit '**/test-results/*.xml'
     }
   }
 }
