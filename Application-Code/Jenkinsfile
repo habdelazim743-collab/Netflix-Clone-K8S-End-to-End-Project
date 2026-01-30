@@ -6,8 +6,7 @@ pipeline {
   }
 
   environment {
-    SCANNER_HOME=tool 'sonar-scanner'
-    SONAR_HOST_URL = 'http://192.168.251.30:9000'
+    SCANNER_HOME = tool 'sonar-scanner'
   }
 
   stages {
@@ -34,15 +33,20 @@ pipeline {
       }
     }
 
-        stage("Sonarqube Analysis "){
-            steps{
-                withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Netflix \
-                    -Dsonar.projectKey=Netflix '''
-                }
-            }
+    stage('SonarQube Analysis') {
+      steps {
+        dir('Application-Code') {
+          withSonarQubeEnv('sonar-server') {
+            sh '''
+              $SCANNER_HOME/bin/sonar-scanner \
+              -Dsonar.projectName=Netflix \
+              -Dsonar.projectKey=Netflix \
+              -Dsonar.sources=src
+            '''
+          }
         }
-
+      }
+    }
 
     stage('OWASP Dependency Check') {
       steps {
@@ -53,4 +57,3 @@ pipeline {
     }
   }
 }
-
