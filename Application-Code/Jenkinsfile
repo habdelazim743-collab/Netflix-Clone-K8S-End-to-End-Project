@@ -59,5 +59,38 @@ pipeline {
         waitForQualityGate abortPipeline: true
       }
     }
+    stage('OWASP FS SCAN') {
+            steps {
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage('TRIVY FS SCAN') {
+            steps {
+                sh "trivy fs . > trivyfs.txt"
+            }
+        }
+        stage("Docker Build & Push"){
+            steps{
+                script{
+                   withDockerRegistry(credentialsId: 'mahmoudtots', toolName: 'docker'){   
+                    
+                       sh "docker build  --build-arg VITE_APP_API_ENDPOINT_URL=https://api.themoviedb.org/3 --build-arg VITE_APP_TMDB_V3_API_KEY=845673a2e32dcc8e2f7ae77e18e3a828 -t ${DOCKER_IMAGE} ."
+                       sh "docker tag ${DOCKER_IMAGE} sevenajay/netflix:latest "
+                       sh "docker push sevenajay/netflix:latest "
+                    }
+                }
+            }
+        }
+        stage("TRIVY"){
+            steps{
+                sh "trivy image sevenajay/netflix:latest > trivyimage.txt" 
+            }
+        }
+        stage('Deploy to container'){
+            steps{
+                sh 'docker run -d --name netflix -p 8081:80 sevenajay/netflix:latest'
+            }
+        }
   }
 }
