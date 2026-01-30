@@ -8,31 +8,20 @@ pipeline {
   environment {
     SCANNER_HOME = tool 'sonar-scanner'
   }
+  
 
   stages {
+    stage('clean workspace'){
+            steps{
+                cleanWs()
+            }
+      }
 
     stage('Checkout') {
       steps {
         checkout scm
       }
     }
-
-    stage('Install Dependencies') {
-      steps {
-        dir('Application-Code') {
-          sh 'yarn install'
-        }
-      }
-    }
-
-    stage('Build React App') {
-      steps {
-        dir('Application-Code') {
-          sh 'yarn build'
-        }
-      }
-    }
-
     stage('SonarQube Analysis') {
       steps {
         dir('Application-Code') {
@@ -50,7 +39,7 @@ pipeline {
     stage("quality gate"){
            steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-cred'
                 }
             }
         }
@@ -61,8 +50,8 @@ pipeline {
             }
         }
     }
-  }
-}
+  
+
     post {
      always {
         emailext attachLog: true,
@@ -74,4 +63,5 @@ pipeline {
             attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
         }
     }
+ }
 }
