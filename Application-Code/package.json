@@ -33,4 +33,9 @@
     "typescript": "^4.6.4",
     "vite": "^3.2.1"
   }
+  "scripts": {
+  "test": "vitest",
+  "test:coverage": "vitest run --coverage"
+}
+
 }
