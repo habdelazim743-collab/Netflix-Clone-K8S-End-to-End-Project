@@ -8,6 +8,7 @@ pipeline {
   environment {
     SCANNER_HOME = tool 'sonar-scanner'
     TMDB_API_KEY = credentials('TMDB_API_KEY')
+    DOCKER_IMAGE = 'mahmoudtots/netflix'
   }
 
   stages {
@@ -73,30 +74,34 @@ pipeline {
                 sh "trivy fs Application-Code > trivyfs.txt"
             }
         }
-        stage("Docker Build & Push"){
-            steps{
-              dir('Application-Code') {
-                script{
-                   withDockerRegistry(credentialsId: 'mahmoudtots', toolName: 'docker'){   
-                    
-                       sh "docker build  --build-arg VITE_APP_API_ENDPOINT_URL=https://api.themoviedb.org/3 --build-arg VITE_APP_TMDB_V3_API_KEY=$TMDB_API_KEY -t ${DOCKER_IMAGE}:latest ."
-                       sh "docker tag ${DOCKER_IMAGE} mahmoudtots/netflix:latest "
-                       sh "docker push mahmoudtots/netflix:latest "
-                    }
-                }
+        stage('Docker Build & Push') {
+          steps {
+            dir('Application-Code') {
+              withCredentials([usernamePassword(credentialsId: 'docker-cred',usernameVariable: 'DOCKER_USER',passwordVariable: 'DOCKER_TOKEN')]) {
+                sh '''
+                echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin
+
+                docker build \
+                --build-arg VITE_APP_API_ENDPOINT_URL=https://api.themoviedb.org/3 \
+                --build-arg VITE_APP_TMDB_V3_API_KEY=$TMDB_API_KEY \
+                -t $DOCKER_IMAGE:latest .
+                
+                docker push $DOCKER_IMAGE:latest
+                '''
               }
             }
-        }
+         }
+        } 
         stage("TRIVY IMAGE SCAN"){
             steps{
-                sh "trivy image mahmoudtots/netflix:latest > trivyimage.txt" 
+                sh "trivy image $DOCKER_IMAGE:latest > trivyimage.txt" 
             }
         }
         stage('Deploy to container'){
             steps{
                 sh '''
                   docker rm -f netflix || true
-                  docker run -d --name netflix -p 8081:80 mahmoudtots/netflix:latest
+                  docker run -d --name netflix -p 8081:80 $DOCKER_IMAGE:latest
                     '''
 
             }
