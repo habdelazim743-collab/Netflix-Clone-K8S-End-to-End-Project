@@ -33,19 +33,20 @@ pipeline {
       }
     }
 
+    stage('Tests & Coverage') {
+      steps {
+        dir('Application-Code') {
+          sh 'yarn vitest run --coverage'
+        }
+      }
+    }
+
     stage('Build') {
       steps {
         dir('Application-Code') {
           sh 'yarn build'
         }
       }
-    }
-    stage('Tests & Coverage') {
-     steps {
-      dir('Application-Code') {
-        sh 'yarn vitest run --coverage'
-      }
-     }
     }
 
     stage('SonarQube Analysis') {
@@ -69,52 +70,68 @@ pipeline {
         waitForQualityGate abortPipeline: true
       }
     }
+
     stage('OWASP FS SCAN') {
-            steps {
-              dir('Application-Code') {
-                withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
-                dependencyCheck additionalArguments: "--nvdApiKey=$NVD_API_KEY --disableYarnAudit --disableNodeAudit", odcInstallation: 'dependency-check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-                }
-              }
-            }
+      steps {
+        dir('Application-Code') {
+          withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
+            dependencyCheck additionalArguments: "--nvdApiKey=$NVD_API_KEY --disableYarnAudit --disableNodeAudit",
+                            odcInstallation: 'dependency-check'
+            dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+          }
         }
-        stage('TRIVY FS SCAN') {
-            steps {
-                sh "trivy fs Application-Code > trivyfs.txt"
-            }
-        }
-        stage('Docker Build & Push') {
-          steps {
-            dir('Application-Code') {
-              withCredentials([usernamePassword(credentialsId: 'docker-cred',usernameVariable: 'DOCKER_USER',passwordVariable: 'DOCKER_TOKEN')]) {
-                sh '''
-                echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin
-                docker build --pull \
+      }
+    }
+
+    stage('TRIVY FS SCAN') {
+      steps {
+        sh 'trivy fs Application-Code > trivyfs.txt'
+      }
+    }
+
+    stage('Docker Build & Push') {
+      steps {
+        dir('Application-Code') {
+          withCredentials([usernamePassword(
+            credentialsId: 'docker-cred',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_TOKEN'
+          )]) {
+            sh '''
+              echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin
+
+              docker build --pull \
                 --build-arg VITE_APP_API_ENDPOINT_URL=https://api.themoviedb.org/3 \
                 --build-arg VITE_APP_TMDB_V3_API_KEY=$TMDB_API_KEY \
                 -t $DOCKER_IMAGE:latest .
-                
-                docker push $DOCKER_IMAGE:latest
-                docker logout
-                '''
-              }
-            }
-          }
-        } 
-        stage("TRIVY IMAGE SCAN"){
-            steps{
-                sh "trivy image $DOCKER_IMAGE:latest > trivyimage.txt" 
-            }
-        }
-        stage('Deploy to container'){
-            steps{
-                sh '''
-                  docker rm -f netflix || true
-                  docker run -d --name netflix -p 8081:5000 $DOCKER_IMAGE:latest
-                    '''
 
-            }
-        } 
+              docker push $DOCKER_IMAGE:latest
+              docker logout
+            '''
+          }
+        }
+      }
+    }
+
+    stage('TRIVY IMAGE SCAN') {
+      steps {
+        sh 'trivy image --exit-code 0 $DOCKER_IMAGE:latest > trivyimage.txt'
+      }
+    }
+
+    stage('Deploy to container') {
+      steps {
+        sh '''
+          docker rm -f netflix || true
+          docker run -d --name netflix -p 8081:5000 $DOCKER_IMAGE:latest
+        '''
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: '*.txt', fingerprint: true
+    }
   }
 }
