@@ -7,6 +7,7 @@ pipeline {
 
   environment {
     SCANNER_HOME = tool 'sonar-scanner'
+    TMDB_API_KEY = credentials('TMDB_API_KEY')
   }
 
   stages {
@@ -61,36 +62,42 @@ pipeline {
     }
     stage('OWASP FS SCAN') {
             steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'dependency-check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
         stage('TRIVY FS SCAN') {
             steps {
-                sh "trivy fs . > trivyfs.txt"
+                sh "trivy fs Application-Code > trivyfs.txt"
             }
         }
-        stage("Docker Build & Push"){
+    /*    stage("Docker Build & Push"){
             steps{
+              dir('Application-Code') {
                 script{
                    withDockerRegistry(credentialsId: 'mahmoudtots', toolName: 'docker'){   
                     
-                       sh "docker build  --build-arg VITE_APP_API_ENDPOINT_URL=https://api.themoviedb.org/3 --build-arg VITE_APP_TMDB_V3_API_KEY=845673a2e32dcc8e2f7ae77e18e3a828 -t ${DOCKER_IMAGE} ."
+                       sh "docker build  --build-arg VITE_APP_API_ENDPOINT_URL=https://api.themoviedb.org/3 --build-arg VITE_APP_TMDB_V3_API_KEY=$TMDB_API_KEY -t ${DOCKER_IMAGE}:latest ."
                        sh "docker tag ${DOCKER_IMAGE} sevenajay/netflix:latest "
                        sh "docker push sevenajay/netflix:latest "
                     }
                 }
+              }
             }
         }
-        stage("TRIVY"){
+        stage("TRIVY IMAGE SCAN"){
             steps{
                 sh "trivy image sevenajay/netflix:latest > trivyimage.txt" 
             }
         }
         stage('Deploy to container'){
             steps{
-                sh 'docker run -d --name netflix -p 8081:80 sevenajay/netflix:latest'
+                sh '''
+                  docker rm -f netflix || true
+                  docker run -d --name netflix -p 8081:80 sevenajay/netflix:latest
+                    '''
+
             }
-        }
+        } */
   }
 }
