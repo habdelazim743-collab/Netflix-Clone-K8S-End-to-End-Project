@@ -65,7 +65,7 @@ pipeline {
             steps {
               dir('Application-Code') {
                 withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
-                dependencyCheck additionalArguments: '--disableYarnAudit --disableNodeAudit', odcInstallation: 'dependency-check'
+                dependencyCheck additionalArguments: "--nvdApiKey=$NVD_API_KEY --disableYarnAudit --disableNodeAudit", odcInstallation: 'dependency-check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
                 }
               }
@@ -82,17 +82,17 @@ pipeline {
               withCredentials([usernamePassword(credentialsId: 'docker-cred',usernameVariable: 'DOCKER_USER',passwordVariable: 'DOCKER_TOKEN')]) {
                 sh '''
                 echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin
-
-                docker build \
+                docker build --pull \
                 --build-arg VITE_APP_API_ENDPOINT_URL=https://api.themoviedb.org/3 \
                 --build-arg VITE_APP_TMDB_V3_API_KEY=$TMDB_API_KEY \
                 -t $DOCKER_IMAGE:latest .
                 
                 docker push $DOCKER_IMAGE:latest
+                docker logout
                 '''
               }
             }
-         }
+          }
         } 
         stage("TRIVY IMAGE SCAN"){
             steps{
