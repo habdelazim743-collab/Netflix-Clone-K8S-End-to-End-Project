@@ -62,8 +62,10 @@ pipeline {
     }
     stage('OWASP FS SCAN') {
             steps {
+              dir('Application-Code') {
                 dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'dependency-check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+              }
             }
         }
         stage('TRIVY FS SCAN') {
@@ -71,15 +73,15 @@ pipeline {
                 sh "trivy fs Application-Code > trivyfs.txt"
             }
         }
-    /*    stage("Docker Build & Push"){
+        stage("Docker Build & Push"){
             steps{
               dir('Application-Code') {
                 script{
                    withDockerRegistry(credentialsId: 'mahmoudtots', toolName: 'docker'){   
                     
                        sh "docker build  --build-arg VITE_APP_API_ENDPOINT_URL=https://api.themoviedb.org/3 --build-arg VITE_APP_TMDB_V3_API_KEY=$TMDB_API_KEY -t ${DOCKER_IMAGE}:latest ."
-                       sh "docker tag ${DOCKER_IMAGE} sevenajay/netflix:latest "
-                       sh "docker push sevenajay/netflix:latest "
+                       sh "docker tag ${DOCKER_IMAGE} mahmoudtots/netflix:latest "
+                       sh "docker push mahmoudtots/netflix:latest "
                     }
                 }
               }
@@ -87,17 +89,17 @@ pipeline {
         }
         stage("TRIVY IMAGE SCAN"){
             steps{
-                sh "trivy image sevenajay/netflix:latest > trivyimage.txt" 
+                sh "trivy image mahmoudtots/netflix:latest > trivyimage.txt" 
             }
         }
         stage('Deploy to container'){
             steps{
                 sh '''
                   docker rm -f netflix || true
-                  docker run -d --name netflix -p 8081:80 sevenajay/netflix:latest
+                  docker run -d --name netflix -p 8081:80 mahmoudtots/netflix:latest
                     '''
 
             }
-        } */
+        } 
   }
 }
