@@ -1,0 +1,57 @@
+#!/bin/bash
+set -e
+
+# Update
+apt update -y
+apt upgrade -y
+
+# Java (Jenkins + Sonar)
+apt install fontconfig openjdk-21-jre
+# Docker
+apt install -y docker.io
+systemctl enable docker
+systemctl start docker
+
+# Jenkins
+apt install -y wget
+wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+apt update -y
+apt install -y jenkins
+systemctl enable jenkins
+systemctl start jenkins
+
+# Node.js 18
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt install -y nodejs
+
+# Yarn
+npm install -g yarn
+
+# AWS CLI
+apt install -y awscli
+
+# Trivy
+apt install -y wget apt-transport-https gnupg lsb-release
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key \
+| gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb jammy main" \
+| tee /etc/apt/sources.list.d/trivy.list
+
+apt update -y
+apt install -y trivy
+
+# OWASP Dependency Check
+apt install -y dependency-check
+
+# Docker permissions
+usermod -aG docker ubuntu
+usermod -aG docker jenkins
+
+# Restart services
+systemctl restart docker
+systemctl restart jenkins
