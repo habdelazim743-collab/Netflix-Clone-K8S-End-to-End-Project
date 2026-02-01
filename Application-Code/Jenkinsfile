@@ -40,15 +40,6 @@ pipeline {
         }
       }
     }
-
-    stage('Build') {
-      steps {
-        dir('Application-Code') {
-          sh 'yarn build'
-        }
-      }
-    }
-
     stage('SonarQube Analysis') {
       steps {
         dir('Application-Code') {
